@@ -1,23 +1,24 @@
+from django.forms import ValidationError
 from rest_framework import serializers
 from .models import Book
 
 
-class BookSerializer(serializers.Serializer):
-    id = serializers.IntegerField(read_only=True)
-    title = serializers.CharField(max_length=100)
-    number_of_pages = serializers.IntegerField()
-    publish_date = serializers.DateField()
-    quantity = serializers.IntegerField()
+class BookSerializer(serializers.ModelSerializer):
+    description = serializers.SerializerMethodField()
 
-    def create(self, data):
-        return Book.objects.create(**data)
+    class Meta:
+        model = Book
+        fields = '__all__'
 
-    def update(self, instance, data):
-        instance.title = data.get('title', instance.title)
-        instance.number_of_pages = data.get(
-            'number_of_pages', instance.number_of_pages)
-        instance.publish_date = data.get('publish_date', instance.publish_date)
-        instance.quantity = data.get('quantity', instance.quantity)
+    def validate_title(self, value):
+        if value == 'rio':
+            raise ValidationError('No rio please')
+        return value
 
-        instance.save()
-        return instance
+    def validate(self, attrs):
+        if attrs['number_of_pages'] >= 200 and attrs['quantity'] >= 200:
+            raise ValidationError('Too heavy for inventory')
+        return super().validate(attrs)
+
+    def get_description(self, data):
+        return f'This book is called {data.title} and it is {data.number_of_pages} long.'
